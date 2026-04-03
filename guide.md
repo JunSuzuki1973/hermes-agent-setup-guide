@@ -1,79 +1,111 @@
-# Hermes Agent セットアップウィザード解説書
+# Hermes Agent セットアップ実践ガイド - Q&A形式
 
-このガイドでは、Hermes Agentをセットアップするための手順をステップバイステップで解説します。
+このガイドでは、実際のセットアッププロセスで交わされる質問と回答をベースに、Hermes Agentをセットアップするための手順をQ&A形式で解説します。
 
 ---
 
 ## 目次
 
-1. [Hermes Agentのインストール](#1-hermes-agentのインストール)
-2. [Kilo Codeプロバイダ設定](#2-kilo-codeプロバイダ設定)
-3. [Telegramボット設定](#3-telegramボット設定)
-4. [Gatewayのsystemdサービス設定](#4-gatewayのsystemdサービス設定)
-5. [モデル設定の変更](#5-モデル設定の変更)
-6. [OpenClawのフォールバック設定](#6-openclawのフォールバック設定)
-7. [トラブルシューティング](#トラブルシューティング)
+1. [インストール編](#1-インストール編)
+2. [Kilo Codeプロバイダ設定編](#2-kilo-codeプロバイダ設定編)
+3. [Telegramボット設定編](#3-telegramボット設定編)
+4. [Gateway常時実行設定編](#4-gateway常時実行設定編)
+5. [モデル設定編](#5-モデル設定編)
+6. [トラブルシューティング編](#トラブルシューティング編)
 
 ---
 
-## 1. Hermes Agentのインストール
+## 1. インストール編
 
-### 前提条件
+### Q1: Node.jsは必要ですか？
 
-- Node.js v18以降がインストールされていること
-- npmが使用可能であること
-
-### インストール手順
-
-#### 1.1 プロジェクトディレクトリの作成
+**A:** はい、Node.js v18以降が必要です。
 
 ```bash
+# Node.jsのバージョン確認
+node --version
+```
+
+v18以上が表示されない場合は、Node.jsをインストールしてください。
+
+---
+
+### Q2: OpenClawはどこにインストールすればいいですか？
+
+**A:** グローバルにインストールすることを推奨します。
+
+```bash
+# グローバルインストール
+npm install -g @openclaw/openclaw
+
+# インストール確認
+openclaw --version
+```
+
+**推奨理由:** グローバルインストールすると、どのディレクトリからでも`openclaw`コマンドが使用できます。
+
+---
+
+### Q3: プロジェクト用ディレクトリは必要ですか？
+
+**A:** はい、作業用のディレクトリを作成することを推奨します。
+
+```bash
+# プロジェクトディレクトリの作成
 mkdir -p ~/clawd
 cd ~/clawd
 ```
 
-#### 1.2 OpenClawのインストール
-
-```bash
-npm install -g @openclaw/openclaw
-```
-
-#### 1.3 インストールの確認
-
-```bash
-openclaw --version
-```
-
-正常にインストールされていれば、バージョン番号が表示されます。
+**推奨理由:** OpenClawの作業ファイルを一箇所にまとめて管理できます。
 
 ---
 
-## 2. Kilo Codeプロバイダ設定
+## 2. Kilo Codeプロバイダ設定編
 
-Kilo Codeは、Hermes Agentが使用するAIモデルを提供するプロバイダです。
+### Q4: Kilo Codeとは何ですか？
 
-### 2.1 Kilo Codeアカウントの作成
+**A:** Kilo Codeは、AIモデルを提供するプロバイダです。Hermes Agentが使用するGPT-4などのモデルにアクセスするために使用します。
 
-1. [Kilo Code](https://kilocode.ai) にアクセスし、アカウントを作成します
-2. APIキーを取得します
+---
 
-### 2.2 環境変数の設定
+### Q5: どうやってKilo Codeのアカウントを作成しますか？
 
+**A:** 以下の手順で作成します：
+
+1. https://kilocode.ai にアクセス
+2. サインアップまたはログイン
+3. ダッシュボードからAPIキーを取得
+
+---
+
+### Q6: APIキーはどこに設定すればいいですか？
+
+**A:** 2箇所に設定することを推奨します。
+
+**方法1: 環境変数（一時的）**
 ```bash
 export KILO_CODE_API_KEY="your-api-key-here"
 ```
 
-永続的な設定には、以下のコマンドを使用します：
-
+**方法2: ~/.bashrc に追加（永続的・推奨）**
 ```bash
 echo 'export KILO_CODE_API_KEY="your-api-key-here"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-### 2.3 設定ファイルの作成
+**推奨理由:** ~/.bashrcに追加すると、ターミナルを再起動しても環境変数が保持されます。
+
+---
+
+### Q7: providers.jsonも必要ですか？
+
+**A:** はい、設定ファイルを作成することを推奨します。
 
 ```bash
+# 設定ディレクトリの作成
 mkdir -p ~/.config/openclaw
+
+# providers.jsonの作成
 cat > ~/.config/openclaw/providers.json << EOF
 {
   "kilo": {
@@ -84,64 +116,144 @@ cat > ~/.config/openclaw/providers.json << EOF
 EOF
 ```
 
+**推奨理由:** 設定ファイルに保存すると、複数のプロバイダを一元管理できます。
+
 ---
 
-## 3. Telegramボット設定
+### Q8: APIキーのセキュリティは大丈夫ですか？
 
-### 3.1 Telegramボットの作成
+**A:** APIキーは機密情報です。以下の点に注意してください：
 
-1. Telegramで [@BotFather](https://t.me/botfather) を開きます
-2. `/newbot` コマンドを入力します
-3. ボット名とユーザー名を設定します
-4. APIトークンを取得します
+- ✅ ~/.bashrc や ~/.config/openclaw/ に保存（パーミッションで保護）
+- ❌ GitHubなどのパブリックリポジトリにコミットしない
+- ❌ チャットやメールに貼り付けない
 
-### 3.2 OpenClawでのボット設定
+**確認方法:**
+```bash
+# ファイルのパーミッション確認
+ls -la ~/.bashrc ~/.config/openclaw/providers.json
+```
+
+---
+
+## 3. Telegramボット設定編
+
+### Q9: Telegramボットを作るにはどうすればいいですか？
+
+**A:** 以下の手順で作成します：
+
+1. Telegramで [@BotFather](https://t.me/botfather) を開く
+2. `/newbot` コマンドを入力
+3. ボット名（例: My Assistant Bot）を入力
+4. ユーザー名（例: my_assistant_bot、最後は_botで終わる必要あり）を入力
+5. APIトークンをコピー
+
+**例:**
+```
+BotFather: Alright, a new bot. How are we going to call it? Please choose a name for your bot.
+あなた: My Assistant Bot
+
+BotFather: Good. Now let's choose a username for your bot. It must end in `bot`. Like this, for example: TetrisBot or tetris_bot.
+あなた: my_assistant_bot
+
+BotFather: Done! Congratulations on your new bot. You will find it at t.me/my_assistant_bot. You can now add a description, about section and profile picture for your bot, see /help for a list of commands.
+Use this token to access the HTTP API:
+1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+Keep your token secure and store it safely, it can be used by anyone to control your bot.
+```
+
+---
+
+### Q10: 自分のTelegram User IDはどうやって確認しますか？
+
+**A:** [@userinfobot](https://t.me/userinfobot) を使用します。
+
+1. [@userinfobot](https://t.me/userinfobot) を開く
+2. `/start` コマンドを入力
+3. Id: 123456789 のような形式で表示される
+
+**例:**
+```
+userinfobot: Id: 8535316477
+Firstname: JUN
+Language code: ja
+```
+
+---
+
+### Q11: OpenClawにボットを登録するにはどうすればいいですか？
+
+**A:** `openclaw telegram:setup` コマンドを使用します。
 
 ```bash
 openclaw telegram:setup
 ```
 
-このコマンドを実行すると、以下の情報を求められます：
-
+**対話形式の例:**
 ```
-? ボットトークンを入力してください: [Telegram Bot Tokenを入力]
-? ペアリングしたいユーザーのIDを入力してください: [あなたのTelegram User ID]
+? ボットトークンを入力してください: 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+? ペアリングしたいユーザーのIDを入力してください: 8535316477
 ```
 
-### 3.3 Telegram User IDの確認方法
-
-1. [@userinfobot](https://t.me/userinfobot) を開きます
-2. `/start` コマンドを入力します
-3. User IDが表示されます
-
-### 3.4 設定の確認
-
+**設定の確認:**
 ```bash
 openclaw telegram:status
 ```
 
-以下のように表示されれば成功です：
-
+**成功した場合の出力:**
 ```
 ✅ Telegramボットがアクティブです
-ボット名: your_bot_name
-ペアリング済みユーザー: Your Name (ID: 123456789)
+ボット名: my_assistant_bot
+ペアリング済みユーザー: JUN (ID: 8535316477)
 ```
 
 ---
 
-## 4. Gatewayのsystemdサービス設定
+### Q12: 複数のユーザーを登録できますか？
 
-Hermes Agentを常時実行するために、systemdサービスを設定します。
-
-### 4.1 サービスファイルの作成
+**A:** はい、複数のユーザーを登録できます。
 
 ```bash
+# 追加のユーザーをペアリング
+openclaw telegram:pair --user-id 1234567890
+```
+
+または、設定ファイルを直接編集して複数のユーザーIDを追加することもできます。
+
+---
+
+### Q13: ボットが応答しない場合はどうすればいいですか？
+
+**A:** 以下の手順でトラブルシューティングしてください：
+
+```bash
+# Gatewayのステータス確認
+openclaw gateway status
+
+# Gatewayが停止している場合は起動
+openclaw gateway start
+
+# Telegram設定の確認
+openclaw telegram:status
+
+# Gatewayのログを確認
+sudo journalctl -u openclaw-gateway -f
+```
+
+---
+
+## 4. Gateway常時実行設定編
+
+### Q14: Gatewayを常時実行させるにはどうすればいいですか？
+
+**A:** systemdサービスを設定することを推奨します。
+
+```bash
+# サービスファイルの作成
 sudo nano /etc/systemd/system/openclaw-gateway.service
 ```
 
-以下の内容を貼り付けます：
-
+**サービスファイルの内容:**
 ```ini
 [Unit]
 Description=OpenClaw Gateway Service
@@ -159,41 +271,120 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-> **注意**: `User` フィールドは、適切なユーザー名に変更してください。
+**重要:**
+- `User` フィールドはあなたのユーザー名に変更してください（例: `jun`）
+- `ExecStart` のパスは `which openclaw` で確認できます
 
-### 4.2 サービスの有効化と開始
+---
+
+### Q15: openclawのパスを確認するには？
+
+**A:** 以下のコマンドで確認できます。
 
 ```bash
+which openclaw
+```
+
+**例:**
+```
+/home/linuxbrew/.linuxbrew/bin/openclaw
+```
+
+---
+
+### Q16: サービスを有効化して起動するには？
+
+**A:** 以下のコマンドを実行します。
+
+```bash
+# systemdの設定を再読み込み
 sudo systemctl daemon-reload
+
+# サービスを有効化（自動起動設定）
 sudo systemctl enable openclaw-gateway
+
+# サービスを起動
 sudo systemctl start openclaw-gateway
 ```
 
-### 4.3 サービスのステータス確認
+---
+
+### Q17: サービスが正常に動いているかどうか確認するには？
+
+**A:** 以下のコマンドでステータスを確認できます。
 
 ```bash
 sudo systemctl status openclaw-gateway
 ```
 
-以下のように表示されれば成功です：
-
+**成功している場合の出力:**
 ```
 ● openclaw-gateway.service - OpenClaw Gateway Service
      Loaded: loaded (/etc/systemd/system/openclaw-gateway.service; enabled; preset: enabled)
-     Active: active (running) since ...
+     Active: active (running) since Fri 2026-04-03 14:30:00 JST; 5min ago
+   Main PID: 12345 (openclaw)
+      Tasks: 5 (limit: 4915)
+     Memory: 45.2M
+        CPU: 123ms
+     CGroup: /system.slice/openclaw-gateway.service
+             └─12345 /home/linuxbrew/.linuxbrew/bin/node /home/linuxbrew/.linuxbrew/bin/openclaw gateway start
 ```
 
-### 4.4 ログの確認
+**キーポイント:**
+- `Active: active (running)` → 正常に動作中
+- `enabled` → システム起動時に自動起動
+
+---
+
+### Q18: サービスのログを確認するには？
+
+**A:** 以下のコマンドでログを確認できます。
 
 ```bash
+# 最新のログを表示（追従モード）
 sudo journalctl -u openclaw-gateway -f
+
+# 最新50行を表示
+sudo journalctl -u openclaw-gateway -n 50
+
+# 今日のログを表示
+sudo journalctl -u openclaw-gateway --since today
 ```
 
 ---
 
-## 5. モデル設定の変更
+### Q19: サービスを再起動するには？
 
-### 5.1 デフォルトモデルの設定
+**A:** 以下のコマンドを実行します。
+
+```bash
+# 再起動
+sudo systemctl restart openclaw-gateway
+
+# 設定変更後は必ず再起動が必要です
+```
+
+---
+
+### Q20: サービスを停止するには？
+
+**A:** 以下のコマンドを実行します。
+
+```bash
+# 停止
+sudo systemctl stop openclaw-gateway
+
+# 自動起動を無効化
+sudo systemctl disable openclaw-gateway
+```
+
+---
+
+## 5. モデル設定編
+
+### Q21: デフォルトのモデルを変更するには？
+
+**A:** config.jsonファイルで設定します。
 
 ```bash
 mkdir -p ~/.config/openclaw
@@ -206,21 +397,35 @@ cat > ~/.config/openclaw/config.json << EOF
 EOF
 ```
 
-### 5.2 プロバイダ別のモデル設定
+**推奨モデル:**
+- `kilo/gpt-4o` - 最新の高性能モデル（推奨）
+- `kilo/gpt-4-turbo` - 高速なモデル
+- `kilo/gpt-3.5-turbo` - 低コストなモデル
+
+---
+
+### Q22: 複数のモデルを設定できますか？
+
+**A:** はい、providers.jsonで複数のモデルを定義できます。
 
 ```bash
 cat > ~/.config/openclaw/providers.json << EOF
 {
   "kilo": {
     "apiKey": "your-api-key-here",
+    "baseUrl": "https://api.kilocode.ai",
     "models": {
       "gpt-4o": {
         "name": "kilo/gpt-4o",
-        "description": "GPT-4o via Kilo Code"
+        "description": "GPT-4o via Kilo Code - 最新の高性能モデル"
       },
       "gpt-4-turbo": {
         "name": "kilo/gpt-4-turbo",
-        "description": "GPT-4 Turbo via Kilo Code"
+        "description": "GPT-4 Turbo via Kilo Code - 高速なモデル"
+      },
+      "gpt-3.5-turbo": {
+        "name": "kilo/gpt-3.5-turbo",
+        "description": "GPT-3.5 Turbo via Kilo Code - 低コストなモデル"
       }
     }
   }
@@ -228,152 +433,182 @@ cat > ~/.config/openclaw/providers.json << EOF
 EOF
 ```
 
-### 5.3 設定の確認
+---
+
+### Q23: 設定が正しく反映されているか確認するには？
+
+**A:** 以下のコマンドで確認できます。
 
 ```bash
+# 設定の表示
 openclaw config:show
+
+# 設定の再読み込み
+openclaw config:reload
 ```
 
 ---
 
-## 6. OpenClawのフォールバック設定
+### Q24: コストを抑えたい場合は？
 
-メインプロバイダが利用できない場合に、フォールバック先を設定します。
+**A:** 以下の方法でコストを抑えることができます：
 
-### 6.1 フォールバック設定の追加
-
-```bash
-cat > ~/.config/openclaw/fallback.json << EOF
+**方法1: 低コストなモデルを使用**
+```json
 {
-  "fallbackProviders": [
-    "openai",
-    "anthropic"
-  ],
-  "fallbackConfig": {
-    "openai": {
-      "apiKey": "your-openai-api-key"
-    },
-    "anthropic": {
-      "apiKey": "your-anthropic-api-key"
-    }
+  "defaults": {
+    "model": "kilo/gpt-3.5-turbo"
   }
 }
-EOF
 ```
 
-### 6.2 優先順位の設定
-
-複数のフォールバック先がある場合、優先順位を設定できます：
-
-```bash
-cat > ~/.config/openclaw/fallback.json << EOF
+**方法2: フォールバック設定を活用**
+```json
 {
   "fallbackProviders": [
     "kilo",
-    "openai",
-    "anthropic"
-  ],
-  "priority": {
-    "kilo": 1,
-    "openai": 2,
-    "anthropic": 3
-  }
+    "openai"
+  ]
 }
-EOF
 ```
 
-### 6.3 フォールバック設定の確認
-
-```bash
-openclaw fallback:test
+**方法3: レート制限を設定**
+```json
+{
+  "rateLimit": {
+    "requestsPerMinute": 30
+  }
+}
 ```
 
 ---
 
-## トラブルシューティング
+### Q25: モデルを切り替えたい場合は？
 
-### Gatewayが起動しない
+**A:** メッセージでモデルを指定して切り替えることができます。
 
-#### 症状
-`sudo systemctl status openclaw-gateway` で `failed` と表示される
+Telegramボットでの例:
+```
+@gpt-4o このタスクをやって
+```
 
-#### 解決策
+または、設定ファイルを編集してデフォルトを変更します。
+
+---
+
+## トラブルシューティング編
+
+### Q26: Gatewayが起動しない場合は？
+
+**A:** 以下の手順で確認してください。
+
+**ステップ1: エラーログの確認**
 ```bash
-# ログを確認
 sudo journalctl -u openclaw-gateway -n 50
+```
 
-# 手動で起動してエラーを確認
+**ステップ2: 手動起動でエラーを確認**
+```bash
 openclaw gateway start
 ```
 
-### Telegramボットが応答しない
+**ステップ3: よくあるエラーと解決策**
 
-#### 症状
-メッセージを送ってもボットが応答しない
+| エラー | 原因 | 解決策 |
+|--------|------|--------|
+| `Permission denied` | パーミッションの問題 | `sudo chmod +x /home/linuxbrew/.linuxbrew/bin/openclaw` |
+| `openclaw: command not found` | パスが通っていない | `which openclaw` でパスを確認し、サービスファイルを修正 |
+| `API key not found` | APIキーが設定されていない | `export KILO_CODE_API_KEY="your-key"` を実行 |
 
-#### 解決策
+---
+
+### Q27: Telegramボットがメッセージに応答しない場合は？
+
+**A:** 以下の手順で確認してください。
+
+**ステップ1: Gatewayのステータス確認**
 ```bash
-# Gatewayのステータスを確認
 openclaw gateway status
+```
 
-# Telegram設定を確認
+**ステップ2: ボット設定の確認**
+```bash
 openclaw telegram:status
+```
 
-# Gatewayを再起動
+**ステップ3: Gatewayを再起動**
+```bash
 sudo systemctl restart openclaw-gateway
 ```
 
-### Kilo Code APIキーのエラー
-
-#### 症状
-`401 Unauthorized` エラーが表示される
-
-#### 解決策
+**ステップ4: ログでエラーを確認**
 ```bash
-# APIキーを再設定
-openclaw config:set kilo.apiKey your-new-api-key
-
-# 環境変数を確認
-echo $KILO_CODE_API_KEY
-```
-
-### モデルの切り替えが効かない
-
-#### 症状
-デフォルトモデルが変更されない
-
-#### 解決策
-```bash
-# 設定を再読み込み
-openclaw config:reload
-
-# 設定ファイルを確認
-cat ~/.config/openclaw/config.json
+sudo journalctl -u openclaw-gateway -f
 ```
 
 ---
 
-## よくある質問
+### Q28: APIキーが無効と表示される場合は？
 
-### Q: Hermes Agentとは何ですか？
+**A:** 以下の手順で確認してください。
 
-A: Hermes Agentは、Telegramボットを通じてAIアシスタントと対話するためのツールです。自然言語処理を使用して、様々なタスクを自動化できます。
+**ステップ1: APIキーの確認**
+```bash
+echo $KILO_CODE_API_KEY
+```
 
-### Q: 複数のユーザーを登録できますか？
+**ステップ2: Kilo CodeダッシュボードでAPIキーを確認**
+- https://kilocode.ai にログイン
+- API Keysセクションでキーが有効か確認
 
-A: はい、複数のユーザーを登録できます。各ユーザーは、個別のTelegram IDを持つ必要があります。
+**ステップ3: APIキーの再設定**
+```bash
+export KILO_CODE_API_KEY="your-new-api-key"
+```
 
-### Q: 無料で使用できますか？
+---
 
-A: 基本的な機能は無料で使用できますが、APIコストはかかります。各プロバイダの料金プランを確認してください。
+### Q29: モデルの切り替えが反映されない場合は？
 
-### Q: VPSにインストールできますか？
+**A:** 以下の手順で確認してください。
 
-A: はい、UbuntuやDebianなどのLinuxディストリビューションが動作するVPSにインストールできます。
+**ステップ1: 設定ファイルの確認**
+```bash
+cat ~/.config/openclaw/config.json
+```
 
-### Q: ボットの応答速度を改善する方法は？
+**ステップ2: 設定の再読み込み**
+```bash
+openclaw config:reload
+```
 
-A: 高速なモデルを選択する、APIエンドポイントを近いリージョンに設定する、またはローカルLLMを使用することで改善できます。
+**ステップ3: Gatewayを再起動**
+```bash
+sudo systemctl restart openclaw-gateway
+```
+
+---
+
+### Q30: メモリ不足のエラーが出る場合は？
+
+**A:** 以下の方法で対処できます。
+
+**方法1: スワップを追加**
+```bash
+# 2GBのスワップファイルを作成
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# 永続化
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+**方法2: Node.jsのメモリ制限を緩和**
+```bash
+export NODE_OPTIONS="--max-old-space-size=2048"
+```
 
 ---
 
